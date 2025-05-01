@@ -6,7 +6,6 @@ from .generate_target_slice import generate_target_slice
 from .visualign_deformations import triangulate
 import cv2
 from skimage import measure
-import threading
 from ..utils.reconstruct_dzi import reconstruct_dzi
 from .transformations import (
     transform_points_to_atlas_space,

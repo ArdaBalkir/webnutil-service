@@ -6,7 +6,7 @@ from neutil import Neutil
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-pnt = Neutil(
+nt = Neutil(
     segmentation_folder=os.path.join(
         script_dir, "./tests/test_data/nonlinear_allen_mouse/segmentations/"
     ),
@@ -22,6 +22,7 @@ pnt = Neutil(
         script_dir, "./tests/test_data/allen_mouse_2017_atlas//allen2017_colours.csv"
     ),
 )
-pnt.get_coordinates(object_cutoff=0, use_flat=False)
-pnt.quantify_coordinates()
-pnt.save_analysis("./test_result/2custom_atlas_hemi_test_24_03_2025")
+nt.get_coordinates(object_cutoff=0, use_flat=False)
+nt.quantify_coordinates()
+print(nt.get_region_summary().sort_values(by="object_count", ascending=False))
+nt.save_analysis("./test_result/2custom_atlas_hemi_test_24_03_2025")

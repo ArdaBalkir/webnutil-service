@@ -1,8 +1,10 @@
 import json
+from pathlib import Path
+from typing import List, Optional, Union
+import pandas as pd
+
 from ..utils.atlas_loader import load_custom_atlas
-from .data_analysis import (
-    quantify_labeled_points,
-)
+from .data_analysis import quantify_labeled_points
 from ..utils.file_operations import save_analysis_output
 from .coordinate_extraction import folder_to_atlas_space
 
@@ -14,7 +16,7 @@ class Neutil:
     Methods
     -------
     constructor(...)
-        Initialize the Neutil class with segmentation, alignment, atlas and region settings.
+        Initialize the Neutil class with segmentation, alignment, and custom atlas settings.
     get_coordinates(...)
         Extract and transform pixel coordinates from segmentation files.
     quantify_coordinates()
@@ -28,7 +30,6 @@ class Neutil:
         segmentation_folder=None,
         alignment_json=None,
         colour=None,
-        atlas_name=None,
         atlas_path=None,
         label_path=None,
         hemi_path=None,
@@ -45,52 +46,49 @@ class Neutil:
             The path to the alignment JSON file (default is None).
         colour : list, optional
             The RGB colour of the object to be quantified in the segmentation (default is None).
-        atlas_name : str, optional
-            The name of the atlas in the brainglobe api to be used for quantification (default is None).
         atlas_path : str, optional
-            The path to the custom atlas volume file, only specify if you don't want to use brainglobe (default is None).
+            The path to the custom atlas volume file (required).
         label_path : str, optional
-            The path to the custom atlas label file, only specify if you don't want to use brainglobe (default is None).
+            The path to the custom atlas label file (required).
+        hemi_path : str, optional
+            The path to the hemisphere map file (optional).
         custom_region_path : str, optional
-            The path to a custom region id file. This can be found
+            The path to a custom region id file (optional).
 
         Raises
         ------
-        KeyError
-            If the settings file does not contain the required keys.
         ValueError
-            If both atlas_path and atlas_name are specified or if neither is specified.
+            If required atlas files are missing or cannot be loaded.
         """
         try:
-
+            # Store basic parameters
             self.segmentation_folder = segmentation_folder
             self.alignment_json = alignment_json
             self.colour = colour
-            self.atlas_name = atlas_name
             self.custom_region_path = custom_region_path
-            if (atlas_path or label_path) and atlas_name:
-                raise ValueError(
-                    "Please specify either atlas_path and label_path or atlas_name. Atlas and label paths are only used for loading custom atlases."
-                )
 
-            if atlas_path and label_path:
-                self.atlas_path = atlas_path
-                self.label_path = label_path
-                self.hemi_path = hemi_path
-                self.atlas_volume, self.hemi_map, self.atlas_labels = load_custom_atlas(
-                    atlas_path, hemi_path, label_path
-                )
+            # Validate and store atlas parameters
+            self._validate_atlas_params(atlas_path, label_path)
+            self.atlas_path = atlas_path
+            self.label_path = label_path
+            self.hemi_path = hemi_path
+
+            # Load custom atlas
+            self.atlas_volume, self.hemi_map, self.atlas_labels = load_custom_atlas(
+                atlas_path, hemi_path, label_path
+            )
 
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            raise ValueError(f"Error loading settings file: {e}")
+            raise ValueError(f"Error loading atlas files: {e}")
         except Exception as e:
             raise ValueError(f"Initialization error: {e}")
 
-    def _check_atlas_name(self):
-        if not self.atlas_name:
-            raise ValueError(
-                "When atlas_path and label_path are not specified, atlas_name must be specified."
-            )
+    def _validate_atlas_params(self, atlas_path, label_path):
+        """Validate that required atlas files are provided."""
+        if not atlas_path:
+            raise ValueError("The atlas_path parameter is required.")
+        if not label_path:
+            raise ValueError("The label_path parameter is required.")
 
     def get_coordinates(
         self, non_linear=True, object_cutoff=0, use_flat=False, apply_damage_mask=True
@@ -100,14 +98,26 @@ class Neutil:
         applies atlas-space transformations, and optionally uses a damage
         mask if specified.
 
-        Args:
-            non_linear (bool, optional): Enable non-linear transformation.
-            object_cutoff (int, optional): Minimum object size.
-            use_flat (bool, optional): Use flat maps if True.
-            apply_damage_mask (bool, optional): Apply damage mask if True.
+        Parameters
+        ----------
+        non_linear : bool, optional
+            Enable non-linear transformation (default is True).
+        object_cutoff : int, optional
+            Minimum object size (default is 0).
+        use_flat : bool, optional
+            Use flat maps if True (default is False).
+        apply_damage_mask : bool, optional
+            Apply damage mask if True (default is True).
 
-        Returns:
-            None: Results are stored in class attributes.
+        Returns
+        -------
+        None
+            Results are stored in class attributes.
+
+        Raises
+        ------
+        ValueError
+            If coordinate extraction fails.
         """
         try:
             (
@@ -140,30 +150,32 @@ class Neutil:
         except Exception as e:
             raise ValueError(f"Error extracting coordinates: {e}")
 
-        except Exception as e:
-            raise ValueError(f"Error extracting coordinates: {e}")
-
     def quantify_coordinates(self):
         """
         Quantifies and summarizes pixel and centroid coordinates by atlas region,
         storing the aggregated results in class attributes.
 
-        Attributes:
-            label_df (pd.DataFrame): Contains aggregated label information.
-            per_section_df (list of pd.DataFrame): DataFrames with section-wise statistics.
-            custom_label_df (pd.DataFrame): Label data enriched with custom regions if custom regions is set.
-            custom_per_section_df (list of pd.DataFrame): Section-wise stats for custom regions if custom regions is set.
+        Attributes
+        ----------
+        label_df : pd.DataFrame
+            Contains aggregated label information.
+        per_section_df : list of pd.DataFrame
+            DataFrames with section-wise statistics.
 
-        Raises:
-            ValueError: If required attributes are missing or computation fails.
+        Raises
+        ------
+        ValueError
+            If required attributes are missing or computation fails.
 
-        Returns:
-            None
+        Returns
+        -------
+        None
         """
-        if not hasattr(self, "pixel_points") and not hasattr(self, "centroids"):
+        if not hasattr(self, "pixel_points") or not hasattr(self, "centroids"):
             raise ValueError(
                 "Please run get_coordinates before running quantify_coordinates."
             )
+
         try:
             (self.label_df, self.per_section_df) = quantify_labeled_points(
                 self.points_len,
@@ -184,7 +196,7 @@ class Neutil:
 
     def save_analysis(self, output_folder):
         """
-        Saves the pixel coordinates and pixel counts to different files in the specified output folder.
+        Saves the analysis results to different files in the specified output folder.
 
         Parameters
         ----------
@@ -194,8 +206,16 @@ class Neutil:
         Returns
         -------
         None
+
+        Raises
+        ------
+        ValueError
+            If saving fails.
         """
         try:
+            # Create output directory if it doesn't exist
+            Path(output_folder).mkdir(parents=True, exist_ok=True)
+
             save_analysis_output(
                 self.pixel_points,
                 self.centroids,
@@ -213,14 +233,34 @@ class Neutil:
                 segmentation_folder=self.segmentation_folder,
                 alignment_json=self.alignment_json,
                 colour=self.colour,
-                atlas_name=getattr(self, "atlas_name", None),
-                custom_region_path=getattr(self, "custom_region_path", None),
-                atlas_path=getattr(self, "atlas_path", None),
-                label_path=getattr(self, "label_path", None),
+                custom_region_path=self.custom_region_path,
+                atlas_path=self.atlas_path,
+                label_path=self.label_path,
                 settings_file=getattr(self, "settings_file", None),
                 prepend="",
             )
 
-            print(f"Saved output to {output_folder}")
+            print(f"Analysis results saved to: {output_folder}")
         except Exception as e:
             raise ValueError(f"Error saving analysis: {e}")
+
+    def get_region_summary(self):
+        """
+        Get a summary of detected objects by brain region.
+
+        Returns
+        -------
+        pd.DataFrame
+            Summary of quantification results by brain region
+
+        Raises
+        ------
+        ValueError
+            If quantification hasn't been run yet
+        """
+        if not hasattr(self, "label_df"):
+            raise ValueError(
+                "Please run quantify_coordinates before getting region summary."
+            )
+
+        return self.label_df
