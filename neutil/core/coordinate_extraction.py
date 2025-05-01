@@ -21,7 +21,6 @@ from .utils import (
     scale_positions,
     process_results,
     get_current_flat_file,
-    start_and_join_threads,
 )
 
 
@@ -169,30 +168,48 @@ def folder_to_atlas_space(
     per_centroid_undamaged_list = [np.array([])] * len(segmentations)
     points_hemi_labels = [np.array([])] * len(segmentations)
     centroids_hemi_labels = [np.array([])] * len(segmentations)
-    threads = create_threads(
-        segmentations,
-        slices,
-        flat_files,
-        flat_file_nrs,
-        atlas_labels,
-        pixel_id,
-        non_linear,
-        points_list,
-        centroids_list,
-        centroids_labels,
-        points_labels,
-        region_areas_list,
-        per_point_undamaged_list,
-        per_centroid_undamaged_list,
-        points_hemi_labels,
-        centroids_hemi_labels,
-        object_cutoff,
-        atlas_volume,
-        hemi_map,
-        use_flat,
-        gridspacing,
-    )
-    start_and_join_threads(threads)
+
+    # Process each segmentation sequentially instead of using threads
+    for index, segmentation_path in enumerate(segmentations):
+        seg_nr = int(number_sections([segmentation_path])[0])
+        current_slice_index = np.where([s["nr"] == seg_nr for s in slices])
+        if len(current_slice_index[0]) == 0:
+            print("segmentation file does not exist in alignment json:")
+            print(segmentation_path)
+            continue
+        current_slice = slices[current_slice_index[0][0]]
+        if current_slice["anchoring"] == []:
+            continue
+        current_flat = get_current_flat_file(
+            seg_nr, flat_files, flat_file_nrs, use_flat
+        )
+
+        # Call the function directly instead of creating a thread
+        segmentation_to_atlas_space(
+            current_slice,
+            segmentation_path,
+            atlas_labels,
+            current_flat,
+            pixel_id,
+            non_linear,
+            points_list,
+            centroids_list,
+            points_labels,
+            centroids_labels,
+            region_areas_list,
+            per_point_undamaged_list,
+            per_centroid_undamaged_list,
+            points_hemi_labels,
+            centroids_hemi_labels,
+            index,
+            object_cutoff,
+            atlas_volume,
+            hemi_map,
+            use_flat,
+            gridspacing,
+        )
+
+    # Process results
     (
         points,
         centroids,
@@ -228,103 +245,6 @@ def folder_to_atlas_space(
         per_point_undamaged_list,
         per_centroid_undamaged_list,
     )
-
-
-def create_threads(
-    segmentations,
-    slices,
-    flat_files,
-    flat_file_nrs,
-    atlas_labels,
-    pixel_id,
-    non_linear,
-    points_list,
-    centroids_list,
-    centroids_labels,
-    points_labels,
-    region_areas_list,
-    per_point_undamaged_list,
-    per_centroid_undamaged_list,
-    point_hemi_labels,
-    centroid_hemi_labels,
-    object_cutoff,
-    atlas_volume,
-    hemi_map,
-    use_flat,
-    gridspacing,
-):
-    """
-    Creates threads to transform each segmentation into atlas space.
-
-    Args:
-        segmentations (list): Paths to segmentation files.
-        slices (list): Slice metadata from alignment JSON.
-        flat_files (list): Flat file paths for optional flat maps.
-        flat_file_nrs (list): Numeric indices for flat files.
-        atlas_labels (DataFrame): Atlas labels.
-        pixel_id (list): Pixel color defined as [R, G, B].
-        non_linear (bool): Enable non-linear transformation if True.
-        points_list (list): Stores point coordinates per segmentation.
-        centroids_list (list): Stores centroid coordinates per segmentation.
-        centroids_labels (list): Stores labels for each centroid array.
-        points_labels (list): Stores labels for each point array.
-        region_areas_list (list): Stores region area data per segmentation.
-        per_point_undamaged_list (list): Track undamaged points per segmentation.
-        per_centroid_undamaged_list (list): Track undamaged centroids per segmentation.
-        point_hemi_labels (list): Hemisphere labels for points.
-        centroid_hemi_labels (list): Hemisphere labels for centroids.
-        object_cutoff (int): Minimum object size threshold.
-        atlas_volume (ndarray): 3D atlas volume (optional).
-        hemi_map (ndarray): Hemisphere mask (optional).
-        use_flat (bool): Use flat files if True.
-        gridspacing (int): Spacing value from alignment data.
-
-    Returns:
-        list: A list of threads for parallel execution.
-    """
-    threads = []
-    for segmentation_path, index in zip(segmentations, range(len(segmentations))):
-        seg_nr = int(number_sections([segmentation_path])[0])
-        current_slice_index = np.where([s["nr"] == seg_nr for s in slices])
-        if len(current_slice_index[0]) == 0:
-            print("segmentation file does not exist in alignment json:")
-            print(segmentation_path)
-            continue
-        current_slice = slices[current_slice_index[0][0]]
-        if current_slice["anchoring"] == []:
-            continue
-        current_flat = get_current_flat_file(
-            seg_nr, flat_files, flat_file_nrs, use_flat
-        )
-
-        x = threading.Thread(
-            target=segmentation_to_atlas_space,
-            args=(
-                current_slice,
-                segmentation_path,
-                atlas_labels,
-                current_flat,
-                pixel_id,
-                non_linear,
-                points_list,
-                centroids_list,
-                points_labels,
-                centroids_labels,
-                region_areas_list,
-                per_point_undamaged_list,
-                per_centroid_undamaged_list,
-                point_hemi_labels,
-                centroid_hemi_labels,
-                index,
-                object_cutoff,
-                atlas_volume,
-                hemi_map,
-                use_flat,
-                gridspacing,
-            ),
-        )
-        threads.append(x)
-    return threads
 
 
 def load_segmentation(segmentation_path: str):

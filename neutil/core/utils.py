@@ -156,20 +156,6 @@ def get_current_flat_file(seg_nr, flat_files, flat_file_nrs, use_flat):
     return None
 
 
-def start_and_join_threads(threads):
-    """
-    Starts a list of threads and joins them to ensure completion.
-
-    Args:
-        threads (list): A list of threading.Thread objects.
-
-    Returns:
-        None
-    """
-    [t.start() for t in threads]
-    [t.join() for t in threads]
-
-
 def process_results(
     points_list,
     centroids_list,
