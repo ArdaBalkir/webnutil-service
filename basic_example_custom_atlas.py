@@ -6,6 +6,10 @@ from nutil import Nutil
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
+# TODO Sliding window for object detection and quantification
+# TODO Strip non-custom atlas code
+
+
 nt = Nutil(
     segmentation_folder=os.path.join(
         script_dir, "./tests/test_data/nonlinear_allen_mouse/segmentations/"
