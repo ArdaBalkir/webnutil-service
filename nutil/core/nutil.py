@@ -9,14 +9,14 @@ from ..utils.file_operations import save_analysis_output
 from .coordinate_extraction import folder_to_atlas_space
 
 
-class Neutil:
+class Nutil:
     """
     A class to perform brain-wide quantification and spatial analysis of serial section images.
 
     Methods
     -------
     constructor(...)
-        Initialize the Neutil class with segmentation, alignment, and custom atlas settings.
+        Initialize the Nutil class with segmentation, alignment, and custom atlas settings.
     get_coordinates(...)
         Extract and transform pixel coordinates from segmentation files.
     quantify_coordinates()
@@ -36,7 +36,7 @@ class Neutil:
         custom_region_path=None,
     ):
         """
-        Initializes the Neutil class with the given parameters.
+        Initializes the Nutil class with the given parameters.
 
         Parameters
         ----------

@@ -2,11 +2,11 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from neutil import Neutil
+from nutil import Nutil
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-nt = Neutil(
+nt = Nutil(
     segmentation_folder=os.path.join(
         script_dir, "./tests/test_data/nonlinear_allen_mouse/segmentations/"
     ),
