@@ -1,4 +1,4 @@
-## Introduction to Webnutil-service.
+## Introduction to Webnutil-service
 
 Webnutil-service is a Python library for performing spatial analysis of labelling in histological brain sections with respect to a reference brain atlas. It aims to replicate the Quantifier feature of the Nutil software (RRID: SCR_017183) for use in an online version of the QUINT workflow. It is built around PyNutil: https://github.com/Neural-Systems-at-UIO/PyNutil. For more information about the QUINT workflow: https://quint-workflow.readthedocs.io/en/latest/.
 
