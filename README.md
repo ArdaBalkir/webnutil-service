@@ -21,7 +21,9 @@ Output:
 
 Webnutil-service creates atlas maps for each brain section internally using the linear and nonlinear markers in the atlas-registration.json. It uses these to define regions in the segmentations, which it uses to measure region areas in pixels. If the segmentations are larger than the atlas maps, it scales up the atlas maps to the size of the segmentations, then uses opencv nearest_neighbour to measure region areas: https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html. 
 
-*Known issues*: When the segmentations have the same size as the images used for atlas registration, the results from webnutil-service and Nutil are identical. When the segmentations are larger than the images used for atlas registration, the region areas from webnutil-service and Nutil are different. Nutil does this calculation differently. It calculates a scaling factor and multiplies the region areas by the scaling factor to calculate new region areas. **Consider changing how webnutil-service performs this calculation to match Nutil**. This will make it easier to perform validation as results can be compared directly to Nutil.
+*Known issues*: When the segmentations have the same size as the images used for atlas registration, the results from webnutil-service and Nutil are identical. When the segmentations are larger than the images used for atlas registration, the region areas from webnutil-service and Nutil are different. Nutil does this calculation differently. It calculates a scaling factor and multiplies the region areas by the scaling factor to calculate new region areas. 
+
+**Consider changing how webnutil-service performs this calculation to match Nutil**. This will make it easier to perform validation as results can be compared directly to Nutil.
 
 *Validation*: Atlas map creation by webnutil-service is correct and has been validated for several datasets (test 1, synthetic dataset and test 2, ttA_NOP dataset requiring scaling of the atlas maps). Note that the atlas maps match the atlas maps created by VisuAlign even when there are no nonlinear adjustments (QuickNII produces slightly different atlas maps to VisuAlign). This is documented here: https://github.com/Neural-Systems-at-UIO/PyNutil/issues/38 
 
@@ -37,9 +39,13 @@ It then uses the geometric center of the objects to assign them to regions using
 
 ![image](https://github.com/user-attachments/assets/5e255cea-9ed5-4fa2-b40a-a8791b1eeff5)
 
-*Known issues*: The total number of objects counted by webnutil-service and Nutil for the ttA_NOP test dataset differs, suggesting they may use different methods for defining objects. **How does Nutil define objects? - Look this up in the Nutil code.**
+*Known issues*: The total number of objects counted by webnutil-service and Nutil for the ttA_NOP test dataset differs, suggesting they may use different methods for defining objects. 
 
-*Known issues*: For the synthetic test dataset which has segmentations of the same size as the images used for atlas-registration, the "object counts per region" using webnutil-service and Nutil are identical and correct. For test datasets with segmentations larger than the images used for atlas-registration, the "object counts per region" from webnutil-service are incorrect (I manually counted for one region, results were way off). Something is going wrong with assigning objects to regions when atlas maps are scaled. **To be investigated.** We also known that Nutil uses a different method for assigning objects to regions. **How does Nutil assign objects to regions? - Look this up in the Nutil code**.
+**How does Nutil define objects? - Look this up in the Nutil code.**
+
+*Known issues*: For the synthetic test dataset which has segmentations of the same size as the images used for atlas-registration, the "object counts per region" using webnutil-service and Nutil are identical and correct. For test datasets with segmentations larger than the images used for atlas-registration, the "object counts per region" from webnutil-service are incorrect (I manually counted for one region, results were way off). Something is going wrong with assigning objects to regions when atlas maps are scaled. **To be investigated.** We also known that Nutil uses a different method for assigning objects to regions. 
+
+**How does Nutil assign objects to regions? - Look this up in the Nutil code**.
 
 ## How are object areas (pixel_count) per region calculated?
 
@@ -49,7 +55,9 @@ To correctly calculate object areas per region (and area fraction), Nutil has a 
 
 ## How are area fractions calculated? 
 
-In webnutil_service, area fraction = pixel_count/ region_area. This has been validated.
+In webnutil_service, area fraction = pixel_count/ region_area. 
+
+**This has been validated.**
 
 
 
