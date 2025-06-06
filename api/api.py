@@ -44,7 +44,7 @@ atlas_configurations = {
     },
 }
 
-redis = Redis(host="localhost", port=6379, db=0, decode_responses=True)
+redis = Redis(host="redis", port=6379, db=0, decode_responses=True)
 
 app = FastAPI()
 
@@ -69,7 +69,7 @@ def schedule_task(request: NutilRequest):
         "task_id": task_id,
         "segmentation_path": request.segmentation_path,
         "alignment_json_path": request.alignment_json_path,
-        "colour": request.colour,
+        "colour": json.dumps(request.colour),
         "atlas_path": atlas_configurations[request.atlas_name]["path"],
         "label_path": atlas_configurations[request.atlas_name]["labels"],
         "upload_to": request.output_path,
@@ -89,7 +89,9 @@ def get_task(task_id: str):
     task_data = redis.hgetall(f"nutil_task:{task_id}")
     if not task_data:
         return {"message": "Task not found."}
-    return {"task": task_data}
+    return {"status": task_data.get("status"), 
+            "message": task_data.get("message"), 
+            "task_id": task_id}
 
 
 @app.get("/all-tasks")

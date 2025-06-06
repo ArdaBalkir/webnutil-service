@@ -1,2 +1,5 @@
 fastapi
 redis
+uvicorn
+requests
+

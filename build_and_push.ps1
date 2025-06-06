@@ -5,13 +5,13 @@ if (-not $env:REGISTRY) {
 }
 
 Write-Host "Building API image for WebNutil"
-docker build -t "$env:REGISTRY/webnutil-api" -f ./dockerfile_api .
+docker build -t "$env:REGISTRY/webnutil-api" -f Dockerfile.api .
 
 Write-Host "Building WebNutil Worker image"
-docker build -t "$env:REGISTRY/webnutil-worker" -f ./worker/Dockerfile .
+docker build -t "$env:REGISTRY/webnutil-worker" -f Dockerfile.worker .
 
 Write-Host "Pushing images to harbor"
 docker push "$env:REGISTRY/webnutil-api"
 docker push "$env:REGISTRY/webnutil-worker"
 
-Write-Push "Build and push completed successfully."
+Write-Host "Build and push completed successfully."

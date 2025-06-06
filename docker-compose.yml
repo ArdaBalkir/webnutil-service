@@ -21,6 +21,7 @@ services:
     depends_on:
       - redis
     volumes:
+      - ./data:/data
       - ./nutil:/app/nutil:ro
       - ./api:/app/api:ro
 
@@ -34,13 +35,9 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      # Read only volumes
+      - ./data:/data
       - ./nutil:/app/nutil:ro
       - ./api:/app/api:ro
-      - ./tests/test_data/allen_mouse_2017_atlas:/app/atlases/allen_mouse_2017_atlas:ro
-      - ./tests/test_data/real_data:/app/atlases/real_data:ro
-      # Write volumes for the intermediary data
-      - ./data
 
 volumes:
   redis-data:
