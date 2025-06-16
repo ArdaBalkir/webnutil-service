@@ -178,73 +178,70 @@ def reconstruct_dzi_pyvips(zip_file_path: str):
             tiles_down = max_y + 1
             logger.info(f"Found tiles grid: {tiles_across} x {tiles_down}")
 
-            # Extract tiles to temporary files for PyVIPS
+            # Create a blank canvas using PyVIPS
+            final_image = pyvips.Image.black(width, height, bands=3)
+            logger.debug(f"Created blank PyVIPS canvas: {width}x{height}")
+            
             import tempfile
             temp_dir = tempfile.mkdtemp()
-            temp_files = []
-            
+            temp_tile_paths = []
             try:
-                # Create a grid of PyVIPS images
-                tile_images = []
-                
+                pyvips.cache_set_max(0) 
                 for y in range(tiles_down):
-                    # Most of the handling of images is done 
-                    row_images = []
                     for x in range(tiles_across):
                         if (x, y) in tiles_dict:
-                            # Extract tile to temp file
-                            tile_data = zip_file.read(tiles_dict[(x, y)])
-                            temp_tile_path = os.path.join(temp_dir, f"tile_{x}_{y}.{img_format}")
-                            with open(temp_tile_path, 'wb') as temp_file:
-                                temp_file.write(tile_data)
-                            temp_files.append(temp_tile_path)
-                            
-                            # Load with PyVIPS
-                            tile_img = pyvips.Image.new_from_file(temp_tile_path, access="sequential")
-                            row_images.append(tile_img)
-                        else:
-                            # Create blank tile if missing
-                            blank_tile = pyvips.Image.black(tile_size, tile_size, bands=3)
-                            row_images.append(blank_tile)
-                    
-                    # Join row horizontally
-                    if row_images:
-                        row_joined = pyvips.Image.arrayjoin(row_images, across=len(row_images))
-                        tile_images.append(row_joined)
-
-                # Join all rows vertically
-                if tile_images:
-                    final_image = pyvips.Image.arrayjoin(tile_images, across=1)
-                    
-                    # Crop to actual size if needed
-                    if final_image.width > width or final_image.height > height:
-                        final_image = final_image.crop(0, 0, min(width, final_image.width), min(height, final_image.height))
-                    
-                    # Convert to numpy array
-                    # PyVIPS uses RGB, OpenCV expects BGR
-                    np_array = np.ndarray(buffer=final_image.write_to_memory(),
-                                        dtype=np.uint8,
-                                        shape=[final_image.height, final_image.width, final_image.bands])
-                    
-                    # Convert RGB to BGR for OpenCV compatibility
-                    if np_array.shape[2] == 3:
-                        np_array = cv2.cvtColor(np_array, cv2.COLOR_RGB2BGR)
-                    
-                    logger.info(f"PyVIPS DZI reconstruction completed: {np_array.shape}")
-                    return np_array
-                
+                            temp_tile_path = None
+                            try:
+                                # Extract single tile to temp file with unique name
+                                tile_data = zip_file.read(tiles_dict[(x, y)])
+                                temp_tile_path = os.path.join(temp_dir, f"tile_{x}_{y}.{img_format}")
+                                with open(temp_tile_path, 'wb') as temp_file:
+                                    temp_file.write(tile_data)
+                                temp_tile_paths.append(temp_tile_path)
+                                # Load tile with PyVIPS using sequential access for memory efficiency
+                                tile_img = pyvips.Image.new_from_file(temp_tile_path, access="sequential")
+                                # Calculate position in final image
+                                x_offset = x * tile_size
+                                y_offset = y * tile_size
+                                # Ensure tile doesn't exceed image boundaries
+                                actual_width = min(tile_img.width, width - x_offset)
+                                actual_height = min(tile_img.height, height - y_offset)
+                                if actual_width > 0 and actual_height > 0:
+                                    # Crop tile if it extends beyond boundaries
+                                    if tile_img.width > actual_width or tile_img.height > actual_height:
+                                        tile_img = tile_img.crop(0, 0, actual_width, actual_height)
+                                    # Insert tile into final image using streaming
+                                    final_image = final_image.insert(tile_img, x_offset, y_offset)
+                                del tile_img
+                                logger.debug(f"Processed tile ({x}, {y}) at offset ({x_offset}, {y_offset})")
+                            except Exception as e:
+                                logger.warning(f"Failed to process tile ({x}, {y}): {e}")
+                                continue
+                logger.debug("Converting PyVIPS image to numpy array...")
+                memory_buffer = final_image.write_to_memory()
+                np_array = np.frombuffer(memory_buffer, dtype=np.uint8).reshape(
+                    (final_image.height, final_image.width, final_image.bands)
+                )
+                if np_array.shape[2] == 3:
+                    np_array = cv2.cvtColor(np_array, cv2.COLOR_RGB2BGR)
+                logger.info(f"PyVIPS DZI reconstruction completed: {np_array.shape}")
+                del final_image
+                 # Clear cache to free memory
+                return np_array
             finally:
-                # Clean up temp files
-                for temp_file in temp_files:
+                # Clean up temp files only after all processing is done
+                for temp_tile_path in temp_tile_paths:
                     try:
-                        os.remove(temp_file)
-                    except:
-                        pass
+                        if os.path.exists(temp_tile_path):
+                            os.remove(temp_tile_path)
+                    except Exception as e:
+                        logger.warning(f"Failed to remove temp tile file {temp_tile_path}: {e}")
                 try:
-                    os.rmdir(temp_dir)
-                except:
-                    pass
-
+                    if os.path.exists(temp_dir):
+                        import shutil
+                        shutil.rmtree(temp_dir)
+                except Exception as e:
+                    logger.warning(f"Failed to clean up temp directory: {e}")
     except Exception as e:
         logger.error(f"PyVIPS reconstruction failed: {e}")
         raise RuntimeError(f"Failed to reconstruct DZI with PyVIPS: {e}")

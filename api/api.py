@@ -44,7 +44,7 @@ atlas_configurations = {
     },
 }
 
-redis = Redis(host="redis", port=6379, db=0, decode_responses=True)
+redis = Redis(host="nutil-redis", port=6379, db=0, decode_responses=True)
 
 app = FastAPI()
 
