@@ -500,35 +500,3 @@ def reconstruct_dzi_opencv(zip_file_path: str):
         # Instead of returning None, re-raise a more generic exception or the original one
         # This makes it clearer to the caller that something went wrong.
         raise RuntimeError(f"Failed to reconstruct DZI from {zip_file_path}: {e}")
-
-
-# Example usage (optional, for testing)
-if __name__ == "__main__":
-    # Setup a basic logger for the script if run directly
-    if not logger.handlers:  # Ensure handlers are set up if __main__ is the entry point
-        main_c_handler = logging.StreamHandler(sys.stdout)
-        main_c_handler.setLevel(logging.DEBUG)
-        main_c_format = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        main_c_handler.setFormatter(main_c_format)
-        logger.addHandler(main_c_handler)
-        logger.propagate = (
-            False  # Prevent duplicate messages if root logger also has handlers
-        )
-
-    logger.info("reconstruct_dzi.py executed as main script.")
-    # Create a dummy DZI zip for testing
-    # This part would require creating actual DZI files or having a sample one.
-    # For now, this just demonstrates the logger setup.
-    # try:
-    #     # Replace with a path to an actual DZI zip file to test
-    #     # img = reconstruct_dzi("path_to_your_dzi_file.zip")
-    #     # if img is not None:
-    #     #     logger.info(f"Reconstructed image shape: {img.shape}")
-    #     #     cv2.imwrite("reconstructed_output.png", img) # Save if needed
-    #     # else:
-    #     #     logger.error("Reconstruction failed.")
-    #     logger.warning("No DZI file provided for testing in __main__ block.")
-    # except Exception as e:
-    #     logger.error(f"Error in __main__ example: {e}", exc_info=True)
