@@ -1,11 +1,17 @@
 import pandas as pd
 import numpy as np
 import nrrd
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def load_atlas_labels(atlas=None, atlas_name=None):
     if not atlas_name and not atlas:
         raise Exception("Either atlas or atlas name must be specified")
+    
+    
     atlas_structures = {
         "idx": [i["id"] for i in atlas.structures_list],
         "name": [i["name"] for i in atlas.structures_list],
@@ -13,8 +19,12 @@ def load_atlas_labels(atlas=None, atlas_name=None):
         "g": [i["rgb_triplet"][1] for i in atlas.structures_list],
         "b": [i["rgb_triplet"][2] for i in atlas.structures_list],
     }
+
+
     atlas_structures["idx"].insert(0, 0)
     atlas_structures["name"].insert(0, "Clear Label")
+
+    logging.info("Atlas structures: %s", atlas_structures["name"][1:10]) 
     atlas_structures["r"].insert(0, 0)
     atlas_structures["g"].insert(0, 0)
     atlas_structures["b"].insert(0, 0)
@@ -67,4 +77,8 @@ def load_custom_atlas(atlas_path, hemi_path, label_path):
     else:
         hemi_volume = None
     atlas_labels = pd.read_csv(label_path)
+    print(
+        f"Loaded custom atlas with {len(atlas_labels)} regions from {atlas_path} and {hemi_path if hemi_path else 'no hemisphere file'}"
+    )
+    print(atlas_volume)
     return atlas_volume, hemi_volume, atlas_labels

@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - redis
+    volumes:
+      - ./data:/data
+      - ./nutil:/app/nutil:ro
+      - ./api:/app/api:ro
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    restart: always
+    depends_on:
+      - redis
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/data
+      - ./nutil:/app/nutil:ro
+      - ./api:/app/api:ro
+
+volumes:
+  redis-data:
+
