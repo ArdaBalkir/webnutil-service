@@ -275,14 +275,33 @@ def _merge_dataframes(current_df, ra, atlas_labels):
         atlas_labels (DataFrame): DataFrame with atlas labels.
 
     Returns:
-        DataFrame: Merged DataFrame.
-    """
-    cols_to_use = ra.columns.difference(atlas_labels.columns)
-    all_region_df = atlas_labels.merge(ra[["idx", *cols_to_use]], on="idx", how="left")
-    cols_to_use = current_df.columns.difference(all_region_df.columns)
-    current_df_new = all_region_df.merge(
-        current_df[["idx", *cols_to_use]], on="idx", how="left"
-    )
+        DataFrame: Merged DataFrame.    """
+    try:
+        # Handle case where ra might be empty or missing 'idx' column
+        if ra.empty or 'idx' not in ra.columns:
+            # Return minimal DataFrame with atlas labels only
+            current_df_new = atlas_labels.copy()
+            current_df_new['pixel_count'] = 0
+            current_df_new['object_count'] = 0
+            return current_df_new
+            
+        cols_to_use = ra.columns.difference(atlas_labels.columns)
+        all_region_df = atlas_labels.merge(ra[["idx", *cols_to_use]], on="idx", how="left")
+        
+        # Handle case where current_df might also be empty or missing 'idx'
+        if current_df.empty or 'idx' not in current_df.columns:
+            return all_region_df
+            
+        cols_to_use = current_df.columns.difference(all_region_df.columns)
+        current_df_new = all_region_df.merge(
+            current_df[["idx", *cols_to_use]], on="idx", how="left"
+        )
+    except KeyError as e:
+        # If merge fails due to missing columns, return atlas labels with zero counts
+        print(f"Warning: Merge failed ({e}), returning atlas labels with zero counts")
+        current_df_new = atlas_labels.copy()
+        current_df_new['pixel_count'] = 0
+        current_df_new['object_count'] = 0
     if (
         "pixel_count" in current_df_new.columns
         and "region_area" in current_df_new.columns

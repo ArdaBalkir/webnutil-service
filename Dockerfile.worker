@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgl1 \
-    libvips42 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements

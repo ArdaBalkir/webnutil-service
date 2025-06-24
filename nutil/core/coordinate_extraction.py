@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from ..utils.read_and_write import load_quint_json
-from .counting_and_load import flat_to_dataframe, rescale_image, load_image
+from .counting_and_load import flat_to_dataframe, load_image
 from .generate_target_slice import generate_target_slice
 from .visualign_deformations import triangulate
 import cv2
@@ -374,11 +374,10 @@ def segmentation_to_atlas_space(
         grid_spacing (int, optional): Spacing value for damage mask.
 
     Returns:
-        None
-    """
+        None    """
     segmentation = load_segmentation(segmentation_path)
-    # Use BGR for red (OpenCV default): [0, 0, 255]
-    pixel_id = np.array([0, 0, 255], dtype=np.uint8)
+
+    pixel_id = np.array(pixel_id, dtype=np.uint8)
     seg_height, seg_width = segmentation.shape[:2]
     reg_height, reg_width = slice_dict["height"], slice_dict["width"]
     triangulation = get_triangulation(slice_dict, reg_width, reg_height, non_linear)
@@ -402,7 +401,7 @@ def segmentation_to_atlas_space(
         triangulation,
         damage_mask,
     )
-    atlas_map = rescale_image(atlas_map, (reg_height, reg_width))
+    atlas_map = cv2.resize(atlas_map, (reg_width, reg_height), interpolation=cv2.INTER_NEAREST)
     y_scale, x_scale = transform_to_registration(
         seg_width, seg_height, reg_width, reg_height
     )
