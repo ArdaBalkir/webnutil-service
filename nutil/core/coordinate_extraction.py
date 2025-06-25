@@ -103,47 +103,39 @@ def create_damage_mask(section, grid_spacing):
 
 
 def folder_to_atlas_space(
-    folder,
-    quint_alignment,
-    atlas_labels,
-    pixel_id=[0, 0, 0],
-    non_linear=True,
-    object_cutoff=0,
-    atlas_volume=None,
-    hemi_map=None,
-    use_flat=False,
-    apply_damage_mask=True,
-):
-    """
-    Processes all segmentation files in a folder, mapping each one to atlas space.
-
-    Args:
-        folder (str): Path to segmentation files.
-        quint_alignment (str): Path to alignment JSON.
-        atlas_labels (DataFrame): DataFrame with atlas labels.
-        pixel_id (list, optional): Pixel color to match.
-        non_linear (bool, optional): Apply non-linear transform.
-        object_cutoff (int, optional): Minimum object size.
-        atlas_volume (ndarray, optional): Atlas volume data.
-        hemi_map (ndarray, optional): Hemisphere mask data.
-        use_flat (bool, optional): If True, load flat files.
-        apply_damage_mask (bool, optional): If True, apply damage mask.
-
-    Returns:
-        tuple: Various arrays and lists containing transformed coordinates and labels.
-    """
+    folder: str,
+    quint_alignment: str,
+    atlas_labels: pd.DataFrame,
+    pixel_id: list[int] = [0, 0, 0],
+    non_linear: bool = True,
+    object_cutoff: int = 0,
+    atlas_volume: np.ndarray | None = None,
+    hemi_map: np.ndarray | None = None,
+    use_flat: bool = False,
+    apply_damage_mask: bool = True,
+) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    list[pd.DataFrame],
+    list[int],
+    list[int],
+    list[str],
+    np.ndarray,
+    np.ndarray,
+]:
     quint_json = load_quint_json(quint_alignment)
-    slices = quint_json["slices"]
-    if apply_damage_mask and "gridspacing" in quint_json:
-        gridspacing = quint_json["gridspacing"]
-    else:
-        gridspacing = None
+    slices = list(quint_json["slices"])  # shallow copy to avoid mutation
+    gridspacing = quint_json.get("gridspacing") if apply_damage_mask else None
     if not apply_damage_mask:
-        for slice in slices:
-            if "grid" in slice:
-                slice.pop("grid")
+        for s in slices:
+            s.pop("grid", None)
     segmentations = get_segmentations(folder)
     flat_files, flat_file_nrs = get_flat_files(folder, use_flat)
+    n = len(segmentations)
     region_areas_list = [
         pd.DataFrame(
             {
@@ -158,34 +150,29 @@ def folder_to_atlas_space(
                 "area_fraction": [],
             }
         )
-    ] * len(segmentations)
-    points_list = [np.array([])] * len(segmentations)
-    points_labels = [np.array([])] * len(segmentations)
-    centroids_list = [np.array([])] * len(segmentations)
-    centroids_labels = [np.array([])] * len(segmentations)
-    per_point_undamaged_list = [np.array([])] * len(segmentations)
-    per_centroid_undamaged_list = [np.array([])] * len(segmentations)
-    points_hemi_labels = [np.array([])] * len(segmentations)
-    centroids_hemi_labels = [np.array([])] * len(segmentations)
-
-    # Process each segmentation sequentially instead of using threads
+        for _ in range(n)
+    ]
+    points_list = [np.array([]) for _ in range(n)]
+    points_labels = [np.array([]) for _ in range(n)]
+    centroids_list = [np.array([]) for _ in range(n)]
+    centroids_labels = [np.array([]) for _ in range(n)]
+    per_point_undamaged_list = [np.array([]) for _ in range(n)]
+    per_centroid_undamaged_list = [np.array([]) for _ in range(n)]
+    points_hemi_labels = [np.array([]) for _ in range(n)]
+    centroids_hemi_labels = [np.array([]) for _ in range(n)]
     for index, segmentation_path in enumerate(segmentations):
         seg_nr = int(number_sections([segmentation_path])[0])
-        current_slice_index = np.where([s["nr"] == seg_nr for s in slices])
-        if len(current_slice_index[0]) == 0:
-            print("segmentation file does not exist in alignment json:")
-            print(segmentation_path)
+        idxs = [i for i, s in enumerate(slices) if s["nr"] == seg_nr]
+        if not idxs:
             region_areas_list[index] = pd.DataFrame({"idx": []})
             continue
-        current_slice = slices[current_slice_index[0][0]]
-        if current_slice["anchoring"] == []:
+        current_slice = slices[idxs[0]]
+        if not current_slice.get("anchoring"):
             region_areas_list[index] = pd.DataFrame({"idx": []})
             continue
         current_flat = get_current_flat_file(
             seg_nr, flat_files, flat_file_nrs, use_flat
         )
-
-        # Call the function directly instead of creating a thread
         segmentation_to_atlas_space(
             current_slice,
             segmentation_path,
@@ -209,19 +196,17 @@ def folder_to_atlas_space(
             use_flat,
             gridspacing,
         )
-
-    # Process results
     (
         points,
         centroids,
-        points_labels,
-        centroids_labels,
-        points_hemi_labels,
-        centroids_hemi_labels,
+        points_labels_arr,
+        centroids_labels_arr,
+        points_hemi_labels_arr,
+        centroids_hemi_labels_arr,
         points_len,
         centroids_len,
-        per_point_undamaged_list,
-        per_centroid_undamaged_list,
+        per_point_undamaged_arr,
+        per_centroid_undamaged_arr,
     ) = process_results(
         points_list,
         centroids_list,
@@ -235,16 +220,16 @@ def folder_to_atlas_space(
     return (
         points,
         centroids,
-        points_labels,
-        centroids_labels,
-        points_hemi_labels,
-        centroids_hemi_labels,
+        points_labels_arr,
+        centroids_labels_arr,
+        points_hemi_labels_arr,
+        centroids_hemi_labels_arr,
         region_areas_list,
         points_len,
         centroids_len,
         segmentations,
-        per_point_undamaged_list,
-        per_centroid_undamaged_list,
+        per_point_undamaged_arr,
+        per_centroid_undamaged_arr,
     )
 
 
