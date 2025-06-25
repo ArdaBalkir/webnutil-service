@@ -430,10 +430,18 @@ def segmentation_to_atlas_space(
         per_point_labels = np.array([])
 
     if scaled_centroidsY is not None and scaled_centroidsX is not None:
-        per_centroid_labels = atlas_map[
-            np.round(scaled_centroidsY).astype(int),
-            np.round(scaled_centroidsX).astype(int),
-        ]
+        # Region-aware centroid assignment: assign centroids based on majority region of their pixels
+        per_centroid_labels = get_region_aware_centroid_labels(
+            segmentation_path,
+            pixel_id,
+            atlas_map,
+            y_scale,
+            x_scale,
+            object_cutoff,
+            tolerance=10,
+        )
+        if per_centroid_labels is None:
+            per_centroid_labels = np.array([])
     else:
         per_centroid_labels = np.array([])
 
@@ -596,3 +604,86 @@ def get_scaled_pixels(segmentation, pixel_id, y_scale, x_scale, tolerance=10):
         return None, None
     scaled_y, scaled_x = scale_positions(id_y, id_x, y_scale, x_scale)
     return scaled_y, scaled_x
+
+
+def get_region_aware_centroid_labels(
+    segmentation_path,
+    pixel_id,
+    atlas_map,
+    y_scale,
+    x_scale,
+    object_cutoff=0,
+    tolerance=10,
+):
+    """
+    Assigns centroid labels based on the region that contains the majority of each object's pixels.
+
+    Args:
+        segmentation_path (str): Path to segmentation file
+        pixel_id (array): Target pixel color
+        atlas_map (ndarray): Atlas region map
+        y_scale (float): Vertical scaling factor
+        x_scale (float): Horizontal scaling factor
+        object_cutoff (int): Minimum object size
+        tolerance (int): Color matching tolerance
+
+    Returns:
+        ndarray: Region labels for each centroid based on majority pixel assignment
+    """
+    # Load segmentation again to get individual objects
+    segmentation = load_segmentation(segmentation_path)
+    if segmentation is None:
+        return None
+
+    # Create binary mask for target pixels
+    binary_seg = np.all(
+        np.abs(segmentation.astype(int) - np.array(pixel_id, dtype=int)) <= tolerance,
+        axis=2,
+    )
+
+    # Get labeled objects
+    labels = measure.label(binary_seg)
+    objects_info = measure.regionprops(labels)
+    objects_info = [obj for obj in objects_info if obj.area > object_cutoff]
+
+    if len(objects_info) == 0:
+        return np.array([])
+
+    centroid_labels = []
+
+    for obj in objects_info:
+        # Get all pixel coordinates for this object
+        obj_coords = obj.coords  # Shape: (n_pixels, 2) in (row, col) format
+        obj_y = obj_coords[:, 0]
+        obj_x = obj_coords[:, 1]
+
+        # Scale coordinates to registration space
+        scaled_obj_y, scaled_obj_x = scale_positions(obj_y, obj_x, y_scale, x_scale)
+
+        # Get atlas labels for all pixels in this object
+        # Ensure coordinates are within atlas_map bounds
+        valid_mask = (
+            (np.round(scaled_obj_y).astype(int) >= 0)
+            & (np.round(scaled_obj_y).astype(int) < atlas_map.shape[0])
+            & (np.round(scaled_obj_x).astype(int) >= 0)
+            & (np.round(scaled_obj_x).astype(int) < atlas_map.shape[1])
+        )
+
+        if not np.any(valid_mask):
+            # If no valid coordinates, assign to background (0)
+            centroid_labels.append(0)
+            continue
+
+        valid_y = np.round(scaled_obj_y[valid_mask]).astype(int)
+        valid_x = np.round(scaled_obj_x[valid_mask]).astype(int)
+
+        # Get region labels for valid pixels
+        pixel_labels = atlas_map[valid_y, valid_x]
+
+        # Find the majority region (most frequent label)
+        unique_labels, counts = np.unique(pixel_labels, return_counts=True)
+        majority_label = unique_labels[np.argmax(counts)]
+
+        centroid_labels.append(majority_label)
+
+    return np.array(centroid_labels)
