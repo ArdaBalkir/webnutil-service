@@ -109,6 +109,10 @@ def save_analysis_output(
             errors="ignore",
         )
 
+    if label_df is not None and "original_idx" in label_df.columns:
+        label_df["idx"] = label_df["original_idx"]
+        label_df = label_df.drop(columns=["original_idx"])
+
     if label_df is not None:
         label_df.to_csv(
             f"{output_folder}/whole_series_report/{prepend}counts.csv",
