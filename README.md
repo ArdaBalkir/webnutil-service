@@ -270,14 +270,6 @@ graph TD
     E --> F[3D Point Clouds<br/>Meshview JSON]
     E --> G[Statistical Reports<br/>CSV/JSON]
     E --> H[Per-section Analysis<br/>Slice-by-slice]
-
-    style A fill:#e1f5fe
-    style B fill:#f3e5f5
-    style C fill:#fff3e0
-    style E fill:#e8f5e8
-    style F fill:#fff8e1
-    style G fill:#fff8e1
-    style H fill:#fff8e1
 ```
 
 ## API Reference
