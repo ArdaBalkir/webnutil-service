@@ -3,6 +3,7 @@ import json
 from .read_and_write import write_hemi_points_to_meshview
 from typing import List
 import shutil
+import pandas as pd
 
 
 def ensure_dir_exists(path: str) -> None:
@@ -39,7 +40,7 @@ def move_file(src: str, dst: str) -> None:
 def save_analysis_output(
     pixel_points,
     centroids,
-    label_df,
+    label_df: pd.DataFrame,
     per_section_df,
     labeled_points,
     labeled_points_centroids,
@@ -108,6 +109,12 @@ def save_analysis_output(
             ],
             errors="ignore",
         )
+
+    # TODO Investigate why these guys multiply to 6
+    label_df = label_df.drop(columns=["MSH", "VIS"], errors="ignore")
+    if label_df is not None and "a" in label_df.columns:
+        label_df["a"] = (label_df["object_count"] != 0).astype(int)
+        # Look at alpha use in the future
 
     if label_df is not None and "original_idx" in label_df.columns:
         label_df["idx"] = label_df["original_idx"]
