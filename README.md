@@ -170,7 +170,7 @@ When non-linear corrections are present, coordinates undergo triangular mesh-bas
 
 #### 3. Atlas Space Transformation
 
-Transformation to 3D atlas coordinates using QuickNII anchoring vectors:
+Transformation to 3D atlas coordinates using QuickNII anchoring vectors. For coordinates in the valid range $x' \in [0, W_{reg}-1]$ and $y' \in [0, H_{reg}-1]$:
 
 ```math
 \begin{pmatrix} X \\ Y \\ Z \end{pmatrix} = \mathbf{o} + \frac{x'}{W_{reg}} \mathbf{u} + \frac{y'}{H_{reg}} \mathbf{v}
@@ -178,9 +178,10 @@ Transformation to 3D atlas coordinates using QuickNII anchoring vectors:
 
 Where:
 
-- $\mathbf{o}$ = origin vector (3D)
-- $\mathbf{u}$ = horizontal axis vector (3D)
-- $\mathbf{v}$ = vertical axis vector (3D)
+- $\mathbf{o}$ = origin vector (3D voxel coordinates of top-left corner)
+- $\mathbf{u}$ = horizontal axis vector (3D voxel coordinates of horizontal edge)
+- $\mathbf{v}$ = vertical axis vector (3D voxel coordinates of vertical edge)
+- $W_{reg}, H_{reg}$ = registration image width and height in pixels
 
 ### Object Detection and Region Assignment
 
