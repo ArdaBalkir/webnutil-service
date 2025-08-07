@@ -5,7 +5,6 @@ __pycache__/
 *.pyost 
 test_dzi_reconstruction.py
 nutil.log
-tests
 atlases/
 data
 .github/
