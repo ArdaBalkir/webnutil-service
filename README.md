@@ -28,7 +28,7 @@ The service requires two primary inputs:
 
 ### 2. Segmented Images
 
-- **Format**: RGB images with unique color codes for labeled structures with registration matching names and relevant section numbers eg. s005
+- **Format**: RGB images with unique color codes for labeled structures with names matching registration section numbers e.g. _s005
 - **Requirements**: Consistent pixel intensities for target structures
 - **Supported**: Standard image formats (PNG, JPEG, TIFF) and DZI archives in .dzip zip stored format
 
