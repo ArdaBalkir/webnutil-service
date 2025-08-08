@@ -230,7 +230,7 @@ Atlas regions are mapped to segmentation space and areas calculated as:
 \text{region\_area}_{r} = \sum_{p} \mathbf{1}[\text{atlas}(p) = r]
 ```
 
-**Known Scaling Issue**: When segmentations are larger than registration images, region areas **can** differ from Nutil. Nutil applies a global scaling factor, while webnutil-service resizes atlas maps using nearest-neighbor interpolationto preserve region label integrity.
+**Known Scaling Issue**: When segmentations are larger than registration images, region areas **can** differ from Nutil. Nutil applies a global scaling factor, while webnutil-service resizes atlas maps using nearest-neighbor interpolation to preserve region label integrity.
 
 \*_under investigation_
 
@@ -249,7 +249,7 @@ _HW refers to the image resolution_
 | Component                 | Status                  | Notes                                             |
 | ------------------------- | ----------------------- | ------------------------------------------------- |
 | Atlas map creation        | Validated               | Matches VisuAlign output for test datasets        |
-| Object detection          | ! Under investigation ! | Object counts differ from Nutil for scaled images |
+| Object detection          | Validated               | Object counts match output for test datasets      |
 | Area splitting            | Validated               | Pixel-level accuracy confirmed                    |
 | Area fractions            | Validated               | Mathematical correctness verified                 |
 | Coordinate transformation | Validated               | 3D atlas space mapping accurate                   |
