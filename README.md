@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A high-performance Python library for spatial analysis of histological brain sections with respect to reference brain atlases. Webnutil-service implements the core quantification algorithms from the [QUINT workflow](https://quint-workflow.readthedocs.io/en/latest/), designed to replicate and extend the Quantifier feature of Nutil software (RRID: SCR_017183).
+A high-performance Python library for spatial analysis of histological brain sections using a reference brain atlases. Webnutil-service implements the core quantification algorithms from the [QUINT workflow](https://quint-workflow.readthedocs.io/en/latest/), designed to replicate and extend the Quantifier feature of Nutil software (RRID: SCR_017183).
 
 ## Overview
 
