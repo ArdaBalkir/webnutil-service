@@ -9,13 +9,13 @@ A high-performance Python library for spatial analysis of histological brain sec
 
 Webnutil-service performs automated spatial quantification of labeled structures in brain tissue sections by:
 
-**Object Detection**: Identifying connected components in segmented images using advanced image processing
+**Object Detection**: Identifying connected components in segmented images using advanced image processing.
 
-**Atlas Registration**: Mapping detected objects to standardized brain atlas coordinates
+**Atlas Registration**: Mapping detected objects to standardized brain atlas coordinates.
 
-**Spatial Quantification**: Computing region-wise statistics including object counts, areas, and density metrics
+**Spatial Quantification**: Computing region-wise statistics including object counts, areas, and density metrics.
 
-**3D Visualization**: Generating point clouds for interactive exploration in atlas space
+**3D Visualization**: Generating point clouds for interactive exploration in atlas space.
 
 ## Inputs
 
@@ -23,21 +23,21 @@ The service requires two primary inputs:
 
 ### 1. Atlas Registration Data
 
-- **Format**: `series_abc_registration.json/waln` from QuickNII, VisuAlign, WebAlign, or WebWarp
-- **Content**: Linear and non-linear transformation parameters, anchoring vectors, slice metadata
+- **Format**: `series_abc_registration.json/waln` from QuickNII, VisuAlign, WebAlign, or WebWarp.
+- **Content**: Linear and non-linear transformation parameters, anchoring vectors, slice metadata.
 
 ### 2. Segmented Images
 
 - **Format**: RGB images with unique color codes for labeled structures with names matching registration section numbers e.g. _s005
-- **Requirements**: Consistent pixel intensities for target structures
-- **Supported**: Standard image formats (PNG, JPEG, TIFF) and DZI archives in .dzip zip stored format
+- **Requirements**: Consistent pixel intensities for target structures.
+- **Supported**: Standard image formats (PNG, JPEG, TIFF) and DZI archives in .dzip zip stored format.
 
 ## Output Products
 
-- **Quantification Reports**: Region-wise statistics in CSV/JSON format
-- **3D Point Clouds**: Atlas-space coordinates for visualization in MeshView or other PointCloud visualizers
-- **Per-section Analysis**: Slice-by-slice analysis results
-- **Hemispheric Statistics**: Left/right brain region comparisons
+- **Quantification Reports**: Region-wise statistics in CSV/JSON format.
+- **3D Point Clouds**: Atlas-space coordinates for visualization in MeshView or other PointCloud visualizers.
+- **Per-section Analysis**: Slice-by-slice analysis results.
+- **Hemispheric Statistics**: Left/right brain region comparisons.
 - **WIP Slice regions visualizations**
 
 ## Installation
