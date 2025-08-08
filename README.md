@@ -24,8 +24,6 @@ Output:
 
 _Known issues_: When the segmentations have the same size as the images used for atlas registration, the results from webnutil-service and Nutil are identical. When the segmentations are larger than the images used for atlas registration, the region areas from webnutil-service and Nutil are different. Nutil does this calculation differently. It calculates a scaling factor and multiplies the region areas by the scaling factor to calculate new region areas.
 
-*Known issues*: When the segmentations have the same size as the images used for atlas registration, the results from webnutil-service and Nutil are identical. When the segmentations are larger than the images used for atlas registration, the region areas from webnutil-service and Nutil are different. Nutil does this calculation differently. It calculates a scaling factor and multiplies the region areas by the scaling factor to calculate new region areas. 
-
 **Consider changing how webnutil-service performs this calculation to match Nutil**. This will make it easier to perform validation as results can be compared directly to Nutil.
 
 *Validation*: Atlas map creation by webnutil-service is correct and has been validated for several datasets (test 1, synthetic dataset and test 2, ttA_NOP dataset requiring scaling of the atlas maps). Note that the atlas maps match the atlas maps created by VisuAlign even when there are no nonlinear adjustments (QuickNII produces slightly different atlas maps to VisuAlign). This is documented here: https://github.com/Neural-Systems-at-UIO/PyNutil/issues/38 
