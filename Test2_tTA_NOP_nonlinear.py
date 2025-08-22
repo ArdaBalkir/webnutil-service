@@ -6,16 +6,15 @@ from nutil import Nutil
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# TODO Sliding window for object detection and quantification
-# TODO Strip non-custom atlas code
-
-
 nt = Nutil(
     segmentation_folder=os.path.join(
         script_dir, "./tests/test_data/Test2_tTA_NOP_nonlinear/segmentations/"
     ),
     alignment_json=os.path.join(
-        script_dir, "./tests/test_data/Test2_tTA_NOP_nonlinear/tTA_2877_NOP_horizontal_final_2017_new_28_05_25.json"
+
+        script_dir,
+        "./tests/test_data/Test2_tTA_NOP_nonlinear/tTA_2877_NOP_horizontal_final_2017_new_28_05_25.json",
+
     ),
     colour=[0, 0, 255],
     atlas_path=os.path.join(
@@ -29,4 +28,6 @@ nt = Nutil(
 nt.get_coordinates(object_cutoff=0, use_flat=False)
 nt.quantify_coordinates()
 print(nt.get_region_summary().sort_values(by="object_count", ascending=False))
+
 nt.save_analysis("./test_result/Test2_tTA_NOP_nonlinear_21_08_25")
+

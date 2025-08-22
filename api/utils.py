@@ -282,4 +282,5 @@ async def upload_directory(directory_path: str, upload_base_path: str, token: st
                                     status_code=upload_response.status,
                                     detail=f"Failed to upload {relative_path}",
                                 )
-    print(f"✓ Uploaded directory {directory_path} to {upload_base_path}")
+                print(f"✓ Uploaded {relative_path} to {upload_base_path}")
+
