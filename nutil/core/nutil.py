@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 import pandas as pd
 import numpy as np
 import logging
@@ -9,6 +9,8 @@ import sys
 from ..utils.atlas_loader import load_custom_atlas
 from .data_analysis import quantify_labeled_points
 from ..utils.file_operations import save_analysis_output
+from ..utils.section_visualization import create_section_visualizations
+from ..utils.read_and_write import read_json
 from .coordinate_extraction import folder_to_atlas_space
 
 # --- Setup Logger ---
@@ -217,6 +219,38 @@ class Nutil:
                 prepend="",
             )
             logger.info(f"Analysis results saved successfully to: {output_folder}")
+
+            # Create section visualizations
+            try:
+                if (
+                    hasattr(self, "atlas_volume")
+                    and self.atlas_volume is not None
+                    and self.alignment_json is not None
+                    and self.segmentation_folder is not None
+                ):
+                    logger.info("Creating section visualizations...")
+                    alignment_data = read_json(self.alignment_json)
+
+                    # Extract objects data per section for visualization
+                    objects_per_section = self._extract_objects_per_section()
+
+                    create_section_visualizations(
+                        segmentation_folder=self.segmentation_folder,
+                        alignment_json=alignment_data,
+                        atlas_volume=self.atlas_volume,
+                        atlas_labels=self.atlas_labels,
+                        output_folder=output_folder,
+                        objects_per_section=objects_per_section,
+                        scale_factor=0.5,
+                    )
+                    logger.info("Section visualizations created successfully")
+                else:
+                    logger.warning(
+                        "Required data not available for visualizations (atlas_volume, alignment_json, or segmentation_folder)"
+                    )
+            except Exception as e:
+                logger.warning(f"Could not create section visualizations: {e}")
+
         except FileNotFoundError as e:
             logger.error(f"Error saving analysis - file not found: {e}", exc_info=True)
             raise ValueError(f"Error saving analysis - file not found: {e}")
@@ -241,3 +275,54 @@ class Nutil:
             )
         logger.info("Region summary retrieved successfully.")
         return self.label_df
+
+    def _extract_objects_per_section(self) -> List[List[Dict]]:
+        """
+        Extract object data per section for visualization purposes.
+
+        Returns:
+            List of object dictionaries for each section
+        """
+        objects_per_section = []
+
+        if not hasattr(self, "per_section_df") or not hasattr(self, "points_len"):
+            return objects_per_section
+
+        # Group objects by section based on points_len and centroids_len
+        for i, (section_df, pl, cl) in enumerate(
+            zip(self.per_section_df, self.points_len, self.centroids_len)
+        ):
+            section_objects = []
+
+            # Convert section DataFrame to object format for visualization
+            if section_df is not None and not section_df.empty:
+                for _, row in section_df.iterrows():
+                    if "idx" in row and "name" in row:
+                        # For visualization, we need to get centroid coordinates
+                        # This is a simplified approach - in practice you might want
+                        # to store more detailed coordinate information per section
+                        obj_dict = {
+                            "idx": int(row["idx"]) if pd.notna(row["idx"]) else 0,
+                            "name": str(row["name"]) if pd.notna(row["name"]) else "",
+                            "count": (
+                                int(row.get("object_count", 0))
+                                if pd.notna(row.get("object_count", 0))
+                                else 0
+                            ),
+                            "triplets": [],  # Would need actual coordinates from centroids
+                        }
+
+                        if "r" in row and "g" in row and "b" in row:
+                            obj_dict.update(
+                                {
+                                    "r": int(row["r"]) if pd.notna(row["r"]) else 128,
+                                    "g": int(row["g"]) if pd.notna(row["g"]) else 128,
+                                    "b": int(row["b"]) if pd.notna(row["b"]) else 128,
+                                }
+                            )
+
+                        section_objects.append(obj_dict)
+
+            objects_per_section.append(section_objects)
+
+        return objects_per_section
