@@ -41,7 +41,8 @@ def move_file(src: str, dst: str) -> None:
 def _apply_dataframe_manipulations(df: pd.DataFrame) -> pd.DataFrame:
     """
     Apply standard manipulations to a dataframe (used for both whole series and per-section reports).
-    
+    Made into a function from the general DF in whole series, manages some of the not nice columns
+
     Args:
         df: Input dataframe to manipulate
         
@@ -72,6 +73,7 @@ def _apply_dataframe_manipulations(df: pd.DataFrame) -> pd.DataFrame:
         )
 
     # TODO Investigate why these guys multiply to 6
+    # This was likely solved via Heidi
     df = df.drop(columns=["MSH", "VIS"], errors="ignore")
     
     if "a" in df.columns:
