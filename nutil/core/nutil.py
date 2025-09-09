@@ -185,14 +185,14 @@ class Nutil:
         self, output_folder: str, create_visualizations: bool = True
     ) -> None:
         logger.info(f"Attempting to save analysis to: {output_folder}")
+        if not hasattr(self, "pixel_points"):
+            logger.error("Attempted to save analysis before coordinate extraction.")
+            raise ValueError("Please run get_coordinates before saving the analysis.")
         if not hasattr(self, "label_df") or not hasattr(self, "per_section_df"):
             logger.error("Attempted to save analysis before quantification.")
             raise ValueError(
                 "Please run quantify_coordinates before saving the analysis."
             )
-        if not hasattr(self, "pixel_points"):
-            logger.error("Attempted to save analysis before coordinate extraction.")
-            raise ValueError("Please run get_coordinates before saving the analysis.")
         try:
             Path(output_folder).mkdir(parents=True, exist_ok=True)
             logger.info(f"Ensured output folder exists or created: {output_folder}")
