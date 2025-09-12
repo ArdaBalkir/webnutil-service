@@ -542,19 +542,19 @@ def assign_labels_to_image(image, labelfile):
     return allen_id_image
 
 
-def count_pixels_per_label(image, scale_factor=False):
+def count_pixels_per_label(image, scale_factor=1.0):
     """
     Counts the pixels associated with each label in an image.
 
     Args:
         image (ndarray): Image array containing labels.
-        scale_factor (bool, optional): Apply scaling if True.
+        scale_factor (float, optional): Scaling factor to normalize pixel counts to segmentation resolution.
 
     Returns:
         DataFrame: Table of label IDs and pixel counts.
     """
     unique_ids, counts = np.unique(image, return_counts=True)
-    if scale_factor:
+    if scale_factor != 1.0 and scale_factor is not False:
         counts = counts * scale_factor
     area_per_label = list(zip(unique_ids, counts))
     df_area_per_label = pd.DataFrame(area_per_label, columns=["idx", "region_area"])
@@ -614,7 +614,7 @@ def flat_to_dataframe(image, damage_mask, hemi_mask, rescaleXY=None):
         image (ndarray): Source image with label IDs.
         damage_mask (ndarray): Binary mask indicating damaged areas.
         hemi_mask (ndarray): Binary mask for hemisphere assignment.
-        rescaleXY (tuple, optional): (width, height) for resizing.
+        rescaleXY (tuple, optional): (width, height) - segmentation dimensions for proper scaling.
 
     Returns:
         DataFrame: Pixel counts grouped by label.
@@ -628,27 +628,36 @@ def flat_to_dataframe(image, damage_mask, hemi_mask, rescaleXY=None):
     if hemi_mask is not None:
         log_memory_usage("input_hemi_mask", hemi_mask, "Input hemi mask")
 
-    # Disable atlas scaling to prevent memory issues - keep everything at original resolution
+    # Calculate scale factor based on segmentation dimensions
+    # rescaleXY now represents segmentation dimensions, not registration
     if rescaleXY:
-        log_memory_usage("rescale_disabled", message=f"Atlas rescaling disabled: keeping {image.shape} instead of {rescaleXY}")
-        # Always resize masks to match image size instead of scaling image up
-        if hemi_mask is not None:
-            hemi_mask = resize(
-                hemi_mask.astype(np.uint8),
-                (image.shape[1], image.shape[0]),
-                order=0,
-                preserve_range=True,
-            )
-        if damage_mask is not None:
-            damage_mask = resize(
-                damage_mask.astype(np.uint8),
-                (image.shape[1], image.shape[0]),
-                order=0,
-                preserve_range=True,
-            ).astype(bool)
-        scale_factor = False
+        atlas_width, atlas_height = image.shape[1], image.shape[0]
+        seg_width, seg_height = rescaleXY
+        
+        # Scale factor = segmentation_resolution / atlas_resolution
+        # This ensures region areas reflect the actual segmentation image size
+        scale_factor = (seg_width * seg_height) / (atlas_width * atlas_height)
+        
+        log_memory_usage("scale_calculation", message=f"Segmentation scaling: atlas={atlas_width}x{atlas_height} -> segmentation={seg_width}x{seg_height} -> scale_factor={scale_factor:.4f}")
     else:
-        scale_factor = False
+        scale_factor = 1.0
+        log_memory_usage("rescale_disabled", message=f"No scaling applied: keeping {image.shape}")
+
+    # Always resize masks to match image size instead of scaling image up
+    if hemi_mask is not None:
+        hemi_mask = resize(
+            hemi_mask.astype(np.uint8),
+            (image.shape[1], image.shape[0]),
+            order=0,
+            preserve_range=True,
+        )
+    if damage_mask is not None:
+        damage_mask = resize(
+            damage_mask.astype(np.uint8),
+            (image.shape[1], image.shape[0]),
+            order=0,
+            preserve_range=True,
+        ).astype(bool)
     df_area_per_label = pd.DataFrame(columns=["idx"])
     if hemi_mask is not None and hemi_mask.shape != image.shape:
         hemi_mask = resize(

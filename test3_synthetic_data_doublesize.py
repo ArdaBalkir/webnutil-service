@@ -6,10 +6,6 @@ from nutil import Nutil
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# TODO Sliding window for object detection and quantification
-# TODO Strip non-custom atlas code
-
-
 nt = Nutil(
     segmentation_folder=os.path.join(
         script_dir, "./tests/test_data/synthetic_data_doublesize_nonlinear/segmentations/"
@@ -23,7 +19,7 @@ nt = Nutil(
         "./tests/test_data/allen_mouse_2017_atlas/annotation_25_reoriented_2017.nrrd",
     ),
     label_path=os.path.join(
-        script_dir, "./tests/test_data/allen_mouse_2017_atlas//allen2017_colours.csv"
+        script_dir, "./tests/test_data/allen_mouse_2017_atlas/allen2017_colours.csv"
     ),
 )
 nt.get_coordinates(object_cutoff=0, use_flat=False)

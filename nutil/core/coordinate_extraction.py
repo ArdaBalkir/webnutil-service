@@ -471,8 +471,8 @@ def segmentation_to_atlas_space(
         use_flat,
         atlas_labels,
         flat_file_atlas,
-        reg_width,
-        reg_height,
+        seg_width,  # Use segmentation width for region area scaling
+        seg_height,  # Use segmentation height for region area scaling
         slice_dict,
         atlas_volume,
         hemi_mask,
