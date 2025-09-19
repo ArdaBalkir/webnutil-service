@@ -150,6 +150,10 @@ def save_analysis_output(
             na_rep="",
             index=False,
         )
+        label_df.to_excel(
+            f"{output_folder}/whole_series_report/{prepend}counts.xlsx",
+            index=False
+        )
     else:
         print("No quantification found, so only coordinates will be saved.")
         print(
