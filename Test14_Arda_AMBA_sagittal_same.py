@@ -14,4 +14,3 @@ nt = Nutil(
 nt.get_coordinates(object_cutoff=0, use_flat=False)
 nt.quantify_coordinates()
 nt.save_analysis("./test_result/Test14_Arda_AMBA_sagittal_same")
-
