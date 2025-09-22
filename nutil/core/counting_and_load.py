@@ -633,15 +633,20 @@ def flat_to_dataframe(image, damage_mask, hemi_mask, rescaleXY=None):
     if rescaleXY:
         atlas_width, atlas_height = image.shape[1], image.shape[0]
         seg_width, seg_height = rescaleXY
-        
+
         # Scale factor = segmentation_resolution / atlas_resolution
         # This ensures region areas reflect the actual segmentation image size
         scale_factor = (seg_width * seg_height) / (atlas_width * atlas_height)
-        
-        log_memory_usage("scale_calculation", message=f"Segmentation scaling: atlas={atlas_width}x{atlas_height} -> segmentation={seg_width}x{seg_height} -> scale_factor={scale_factor:.4f}")
+
+        log_memory_usage(
+            "scale_calculation",
+            message=f"Segmentation scaling: atlas={atlas_width}x{atlas_height} -> segmentation={seg_width}x{seg_height} -> scale_factor={scale_factor:.4f}",
+        )
     else:
         scale_factor = 1.0
-        log_memory_usage("rescale_disabled", message=f"No scaling applied: keeping {image.shape}")
+        log_memory_usage(
+            "rescale_disabled", message=f"No scaling applied: keeping {image.shape}"
+        )
 
     # Always resize masks to match image size instead of scaling image up
     if hemi_mask is not None:
@@ -785,6 +790,10 @@ def load_image(file, image_vector, volume, triangulation, rescaleXY, labelfile=N
         log_memory_usage("before_warp", image, "Before image warping")
         image = warp_image(image, triangulation, rescaleXY)
         log_memory_usage("after_warp", image, "After image warping")
+
+    # Always resize to rescaleXY
+    image = resize(image, rescaleXY, order=0, preserve_range=True, mode="reflect")
+    log_memory_usage("after_resize", image, "After resizing to target size")
 
     log_memory_usage("load_image_final", image, "Final image from load_image")
     return image

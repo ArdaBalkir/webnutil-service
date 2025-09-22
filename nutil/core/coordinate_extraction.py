@@ -353,6 +353,8 @@ def get_region_areas(
     Returns:
         tuple: (DataFrame of region areas, atlas map array).
     """
+    reg_width = slice_dict["width"]
+    reg_height = slice_dict["height"]
     log_memory_usage(
         "before_load_image",
         message=f"Before load_image - seg: {seg_width}x{seg_height}",
@@ -365,7 +367,7 @@ def get_region_areas(
         slice_dict["anchoring"],
         atlas_volume,
         triangulation,
-        (seg_width, seg_height),
+        (reg_width, reg_height),
         atlas_labels,
     )
     log_memory_usage("atlas_map_loaded", atlas_map, "Atlas map after load_image")
@@ -481,39 +483,11 @@ def segmentation_to_atlas_space(
     )
     log_memory_usage("atlas_map", atlas_map, "After get_region_areas")
 
-    # Check if the resize would create a huge array - if so, work at original resolution
-    target_size = reg_height * reg_width * 4  # 4 bytes per uint32
+    scaled_atlas_map = atlas_map
     atlas_at_original_resolution = False
-    if target_size > 500 * 1024 * 1024:  # If larger than 500MB
-        atlas_at_original_resolution = True
-        log_memory_usage(
-            "large_resize_detected",
-            message=f"Large resize detected: {reg_height}x{reg_width} = {target_size/1024/1024:.1f} MB, using original resolution",
-        )
-        scaled_atlas_map = atlas_map
-        # IMPORTANT: Still scale coordinates to registration resolution, not atlas resolution
-        # This ensures the coordinate transformation chain remains correct
-        y_scale, x_scale = transform_to_registration(
-            seg_width, seg_height, reg_width, reg_height
-        )
-        log_memory_usage(
-            "atlas_original_res",
-            message=f"Atlas kept at original resolution {atlas_map.shape}, but coordinates scaled to registration {reg_height}x{reg_width}",
-        )
-    else:
-        scaled_atlas_map = resize(
-            atlas_map,
-            (reg_height, reg_width),
-            order=0,
-            preserve_range=True,
-            mode="edge",
-        )
-        log_memory_usage(
-            "scaled_atlas_map", scaled_atlas_map, "After resizing atlas_map"
-        )
-        y_scale, x_scale = transform_to_registration(
-            seg_width, seg_height, reg_width, reg_height
-        )
+    y_scale, x_scale = transform_to_registration(
+        seg_width, seg_height, reg_width, reg_height
+    )
     centroids, points = None, None
     scaled_centroidsX, scaled_centroidsY, scaled_x, scaled_y = None, None, None, None
 
@@ -535,6 +509,8 @@ def segmentation_to_atlas_space(
         atlas_at_original_resolution=atlas_at_original_resolution,
         reg_height=reg_height,
         reg_width=reg_width,
+        seg_height=seg_height,
+        seg_width=seg_width,
     )
 
     log_memory_usage(
@@ -803,6 +779,8 @@ def get_objects_and_assign_regions_optimized(
     atlas_at_original_resolution=False,
     reg_height=None,
     reg_width=None,
+    seg_height=None,
+    seg_width=None,
 ):
     """
     OPTIMIZED: Single-pass object detection, pixel extraction, and region assignment.
@@ -821,6 +799,8 @@ def get_objects_and_assign_regions_optimized(
         atlas_at_original_resolution (bool): Whether atlas is at original resolution
         reg_height (int): Registration height (for coordinate mapping)
         reg_width (int): Registration width (for coordinate mapping)
+        seg_height (int): Segmentation height
+        seg_width (int): Segmentation width
 
     Returns:
         tuple: (centroids, scaled_centroidsX, scaled_centroidsY, scaled_y, scaled_x, per_centroid_labels)
