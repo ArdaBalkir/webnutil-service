@@ -6,7 +6,7 @@ from nutil import Nutil
 
 nt = Nutil(
     segmentation_folder="tests/test_data/Test10-17_Arda_synthetic_data/segmentations-original/",
-    alignment_json="tests/test_data/Test10-17_Arda_synthetic_data/Test16-17_Arda_AMBA_oblique_nonlin.json",
+    alignment_json="tests/test_data/Test10-17_Arda_synthetic_data/Test16-17_Arda_AMBA_oblique_nonlin_new.json",
     colour=[0, 0, 0],
     atlas_path="tests/test_data/allen_mouse_2017_atlas/annotation_25_reoriented_2017.nrrd",
     label_path="tests/test_data/allen_mouse_2017_atlas/allen2017_colours.csv",
