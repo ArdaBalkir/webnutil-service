@@ -5,7 +5,7 @@ sys.path.append(str(Path(__file__).parent))
 from nutil import Nutil
 
 nt = Nutil(
-    segmentation_folder="tests/test_data/Test10-17_Arda_synthetic_data/segmentations-double_ImageJ/",
+    segmentation_folder="tests/test_data/Test10-17_Arda_synthetic_data/segmentations-original/",
     alignment_json="tests/test_data/Test10-17_Arda_synthetic_data/Test10-11_Arda_AMBA_coronal_nonlin_new.json",
     colour=[0, 0, 0],
     atlas_path="tests/test_data/allen_mouse_2017_atlas/annotation_25_reoriented_2017.nrrd",
@@ -14,4 +14,4 @@ nt = Nutil(
 nt.get_coordinates(object_cutoff=0, use_flat=False)
 nt.quantify_coordinates()
 
-nt.save_analysis("./test_result/Test10_Arda_AMBA_coronal_double")
+nt.save_analysis("./test_result/Test10_Arda_AMBA_coronal_same")
