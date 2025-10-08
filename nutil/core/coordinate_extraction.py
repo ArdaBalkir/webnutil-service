@@ -485,7 +485,10 @@ def segmentation_to_atlas_space(
 
     scaled_atlas_map = atlas_map
     atlas_at_original_resolution = False
-    y_scale, x_scale = transform_to_registration(
+    # Since atlas_map is now at segmentation resolution, no scaling needed for object assignment
+    y_scale, x_scale = 1.0, 1.0
+    # But we still need the registration scale for later coordinate transformation
+    reg_y_scale, reg_x_scale = transform_to_registration(
         seg_width, seg_height, reg_width, reg_height
     )
     centroids, points = None, None
@@ -705,15 +708,22 @@ def segmentation_to_atlas_space(
     else:
         per_centroid_labels = np.array([])
 
+    # Scale coordinates to registration space for transformation
+    # (they're currently in segmentation space since y_scale=x_scale=1.0)
+    scaled_x_for_transform = scaled_x * reg_x_scale
+    scaled_y_for_transform = scaled_y * reg_y_scale
+    scaled_centroidsX_for_transform = scaled_centroidsX * reg_x_scale if scaled_centroidsX is not None else None
+    scaled_centroidsY_for_transform = scaled_centroidsY * reg_y_scale if scaled_centroidsY is not None else None
+
     # transform coordinates - handle missing centroids gracefully
-    if scaled_centroidsX is not None and scaled_centroidsY is not None:
+    if scaled_centroidsX_for_transform is not None and scaled_centroidsY_for_transform is not None:
         new_x, new_y, centroids_new_x, centroids_new_y = get_transformed_coordinates(
             non_linear,
             slice_dict,
-            scaled_x[per_point_undamaged],
-            scaled_y[per_point_undamaged],
-            scaled_centroidsX[per_centroid_undamaged],
-            scaled_centroidsY[per_centroid_undamaged],
+            scaled_x_for_transform[per_point_undamaged],
+            scaled_y_for_transform[per_point_undamaged],
+            scaled_centroidsX_for_transform[per_centroid_undamaged],
+            scaled_centroidsY_for_transform[per_centroid_undamaged],
             triangulation,
         )
     else:
@@ -721,8 +731,8 @@ def segmentation_to_atlas_space(
         new_x, new_y, _, _ = get_transformed_coordinates(
             non_linear,
             slice_dict,
-            scaled_x[per_point_undamaged],
-            scaled_y[per_point_undamaged],
+            scaled_x_for_transform[per_point_undamaged],
+            scaled_y_for_transform[per_point_undamaged],
             np.array([]),
             np.array([]),
             triangulation,
