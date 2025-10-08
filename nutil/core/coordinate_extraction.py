@@ -367,7 +367,7 @@ def get_region_areas(
         slice_dict["anchoring"],
         atlas_volume,
         triangulation,
-        (reg_width, reg_height),
+        (seg_width, seg_height),
         atlas_labels,
     )
     log_memory_usage("atlas_map_loaded", atlas_map, "Atlas map after load_image")
