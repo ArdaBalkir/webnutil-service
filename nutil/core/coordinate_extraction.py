@@ -522,16 +522,19 @@ def segmentation_to_atlas_space(
     del segmentation
     log_memory_usage("after_del_segmentation", message="After deleting segmentation")
 
-    # Robustly handle missing color matches
-    if (
-        scaled_y is None
-        or scaled_x is None
-        or scaled_centroidsX is None
-        or scaled_centroidsY is None
-    ):
+    # handle case where no pixels or objects are detected
+    # region_areas should still be preserved as they're independent of object detection
+    if scaled_y is None or scaled_x is None:
+        # no pixels detected - set all outputs to empty but preserve region_areas
+        # add pixel_count and object_count columns with 0 values for downstream compatibility
+        if not region_areas.empty and "pixel_count" not in region_areas.columns:
+            region_areas["pixel_count"] = 0
+        if not region_areas.empty and "object_count" not in region_areas.columns:
+            region_areas["object_count"] = 0
+        
         points_list[index] = np.array([])
         centroids_list[index] = np.array([])
-        region_areas_list[index] = pd.DataFrame()
+        region_areas_list[index] = region_areas  # preserve calculated region areas
         centroids_labels[index] = np.array([])
         per_centroid_undamaged_list[index] = np.array([])
         points_labels[index] = np.array([])
@@ -539,7 +542,7 @@ def segmentation_to_atlas_space(
         points_hemi_labels[index] = np.array([])
         centroids_hemi_labels[index] = np.array([])
 
-        # Clean up atlas_map early
+        # clean up atlas_map early
         del atlas_map
         if damage_mask is not None:
             del damage_mask
@@ -547,6 +550,16 @@ def segmentation_to_atlas_space(
             del hemi_mask
         gc.collect()
         return
+
+    # handle case where pixels exist but no objects (centroids) detected
+    # this happens when all objects are filtered out by object_cutoff
+    if scaled_centroidsX is None or scaled_centroidsY is None:
+        # pixels detected but no objects - process pixels only, preserve region_areas
+        centroids_list[index] = np.array([])
+        centroids_labels[index] = np.array([])
+        per_centroid_undamaged_list[index] = np.array([])
+        centroids_hemi_labels[index] = np.array([])
+        # continue processing points below, don't return early
 
     # Assign point labels
     if scaled_y is not None and scaled_x is not None:
@@ -627,25 +640,32 @@ def segmentation_to_atlas_space(
             .astype(int)
             .clip(0, damage_mask.shape[1] - 1),
         ]
-        per_centroid_undamaged = damage_mask[
-            np.round(
-                scaled_centroidsY
-                * y_scale
-                / (seg_height / atlas_height if "atlas_height" in locals() else 1)
-            )
-            .astype(int)
-            .clip(0, damage_mask.shape[0] - 1),
-            np.round(
-                scaled_centroidsX
-                * x_scale
-                / (seg_width / atlas_width if "atlas_width" in locals() else 1)
-            )
-            .astype(int)
-            .clip(0, damage_mask.shape[1] - 1),
-        ]
+        if scaled_centroidsX is not None and scaled_centroidsY is not None:
+            per_centroid_undamaged = damage_mask[
+                np.round(
+                    scaled_centroidsY
+                    * y_scale
+                    / (seg_height / atlas_height if "atlas_height" in locals() else 1)
+                )
+                .astype(int)
+                .clip(0, damage_mask.shape[0] - 1),
+                np.round(
+                    scaled_centroidsX
+                    * x_scale
+                    / (seg_width / atlas_width if "atlas_width" in locals() else 1)
+                )
+                .astype(int)
+                .clip(0, damage_mask.shape[1] - 1),
+            ]
+        else:
+            per_centroid_undamaged = np.array([], dtype=bool)
     else:
         per_point_undamaged = np.ones(scaled_x.shape, dtype=bool)
-        per_centroid_undamaged = np.ones(scaled_centroidsX.shape, dtype=bool)
+        per_centroid_undamaged = (
+            np.ones(scaled_centroidsX.shape, dtype=bool)
+            if scaled_centroidsX is not None
+            else np.array([], dtype=bool)
+        )
     if hemi_mask is not None:
         log_memory_usage(
             "hemi_mask_before_resize", hemi_mask, "Before hemi mask resize"
@@ -662,28 +682,53 @@ def segmentation_to_atlas_space(
             np.round(scaled_y).astype(int),
             np.round(scaled_x).astype(int),
         ]
-        per_centroid_hemi = hemi_mask[
-            np.round(scaled_centroidsY).astype(int),
-            np.round(scaled_centroidsX).astype(int),
-        ]
+        if scaled_centroidsX is not None and scaled_centroidsY is not None:
+            per_centroid_hemi = hemi_mask[
+                np.round(scaled_centroidsY).astype(int),
+                np.round(scaled_centroidsX).astype(int),
+            ]
+            per_centroid_hemi = per_centroid_hemi[per_centroid_undamaged]
+        else:
+            per_centroid_hemi = np.array([])
         per_point_hemi = per_point_hemi[per_point_undamaged]
-        per_centroid_hemi = per_centroid_hemi[per_centroid_undamaged]
     else:
         per_point_hemi = [None] * len(scaled_x)
-        per_centroid_hemi = [None] * len(scaled_centroidsX)
+        per_centroid_hemi = (
+            [None] * len(scaled_centroidsX)
+            if scaled_centroidsX is not None
+            else np.array([])
+        )
 
     per_point_labels = per_point_labels[per_point_undamaged]
-    per_centroid_labels = per_centroid_labels[per_centroid_undamaged]
+    if per_centroid_labels is not None and len(per_centroid_labels) > 0:
+        per_centroid_labels = per_centroid_labels[per_centroid_undamaged]
+    else:
+        per_centroid_labels = np.array([])
 
-    new_x, new_y, centroids_new_x, centroids_new_y = get_transformed_coordinates(
-        non_linear,
-        slice_dict,
-        scaled_x[per_point_undamaged],
-        scaled_y[per_point_undamaged],
-        scaled_centroidsX[per_centroid_undamaged],
-        scaled_centroidsY[per_centroid_undamaged],
-        triangulation,
-    )
+    # transform coordinates - handle missing centroids gracefully
+    if scaled_centroidsX is not None and scaled_centroidsY is not None:
+        new_x, new_y, centroids_new_x, centroids_new_y = get_transformed_coordinates(
+            non_linear,
+            slice_dict,
+            scaled_x[per_point_undamaged],
+            scaled_y[per_point_undamaged],
+            scaled_centroidsX[per_centroid_undamaged],
+            scaled_centroidsY[per_centroid_undamaged],
+            triangulation,
+        )
+    else:
+        # only transform points, no centroids
+        new_x, new_y, _, _ = get_transformed_coordinates(
+            non_linear,
+            slice_dict,
+            scaled_x[per_point_undamaged],
+            scaled_y[per_point_undamaged],
+            np.array([]),
+            np.array([]),
+            triangulation,
+        )
+        centroids_new_x = np.array([])
+        centroids_new_y = np.array([])
     points, centroids = transform_points_to_atlas_space(
         slice_dict,
         new_x,
