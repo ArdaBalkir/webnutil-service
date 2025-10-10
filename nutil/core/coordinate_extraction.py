@@ -1,15 +1,17 @@
 import numpy as np
 import pandas as pd
-from ..utils.read_and_write import load_quint_json
-from .counting_and_load import flat_to_dataframe, load_image
-from .generate_target_slice import generate_target_slice
-from .visualign_deformations import triangulate
 import cv2
 import gc
 import psutil
 import logging
 from skimage import measure
 from skimage.transform import resize
+
+# custom imports 
+from ..utils.read_and_write import load_quint_json
+from .counting_and_load import flat_to_dataframe, load_image
+from .generate_target_slice import generate_target_slice
+from .visualign_deformations import triangulate
 from ..utils.reconstruct_dzi import reconstruct_dzi
 from .transformations import (
     transform_points_to_atlas_space,
@@ -19,7 +21,7 @@ from .transformations import (
 from .utils import (
     get_flat_files,
     get_segmentations,
-    number_sections,
+    extract_section_numbers,
     scale_positions,
     process_results,
     get_current_flat_file,
@@ -213,7 +215,7 @@ def folder_to_atlas_space(
             "processing_slice",
             message=f"Processing slice {index+1}/{n}: {segmentation_path}",
         )
-        seg_nr = int(number_sections([segmentation_path])[0])
+        seg_nr = int(extract_section_numbers([segmentation_path])[0])
         idxs = [i for i, s in enumerate(slices) if s["nr"] == seg_nr]
         if not idxs:
             region_areas_list[index] = pd.DataFrame({"idx": []})
@@ -485,9 +487,8 @@ def segmentation_to_atlas_space(
 
     scaled_atlas_map = atlas_map
     atlas_at_original_resolution = False
-    y_scale, x_scale = transform_to_registration(
-        seg_width, seg_height, reg_width, reg_height
-    )
+    y_scale = (reg_height - 1) / (seg_height - 1)
+    x_scale = (reg_width - 1) / (seg_width - 1)
     centroids, points = None, None
     scaled_centroidsX, scaled_centroidsY, scaled_x, scaled_y = None, None, None, None
 
