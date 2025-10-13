@@ -527,15 +527,10 @@ def segmentation_to_atlas_space(
     # region_areas should still be preserved as they're independent of object detection
     if scaled_y is None or scaled_x is None:
         # no pixels detected - set all outputs to empty but preserve region_areas
-        # add pixel_count and object_count columns with 0 values for downstream compatibility
-        if not region_areas.empty and "pixel_count" not in region_areas.columns:
-            region_areas["pixel_count"] = 0
-        if not region_areas.empty and "object_count" not in region_areas.columns:
-            region_areas["object_count"] = 0
-        
+        # note: pixel_count, object_count, and atlas label columns will be added downstream in data_analysis.py
         points_list[index] = np.array([])
         centroids_list[index] = np.array([])
-        region_areas_list[index] = region_areas  # preserve calculated region areas
+        region_areas_list[index] = region_areas  # preserve calculated region areas as-is
         centroids_labels[index] = np.array([])
         per_centroid_undamaged_list[index] = np.array([])
         points_labels[index] = np.array([])
