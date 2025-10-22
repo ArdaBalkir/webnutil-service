@@ -303,6 +303,7 @@ def segmentation_to_atlas_space(
         scaled_y,
         scaled_x,
         per_centroid_labels,
+        binary_seg,
     ) = get_objects_and_assign_regions_optimized(
         segmentation,
         pixel_id,
@@ -318,14 +319,15 @@ def segmentation_to_atlas_space(
         seg_width=seg_width,
     )
 
+    # Delete segmentation immediately after processing to free memory
+    del segmentation
+    log_memory_usage("after_del_segmentation", message="After deleting segmentation")
+    
     log_memory_usage(
         "centroids", centroids, "After get_objects_and_assign_regions_optimized"
     )
     log_memory_usage("scaled_coordinates", scaled_x, "scaled_x coordinates")
     log_memory_usage("scaled_coordinates_y", scaled_y, "scaled_y coordinates")
-
-    del segmentation
-    log_memory_usage("after_del_segmentation", message="After deleting segmentation")
 
     # handle case where no pixels detected
     if scaled_y is None or scaled_x is None:
@@ -409,7 +411,7 @@ def segmentation_to_atlas_space(
     log_memory_usage("final_points", points, "Final transformed points")
     log_memory_usage("final_centroids", centroids, "Final transformed centroids")
 
-    del scaled_atlas_map, atlas_map
+    del scaled_atlas_map, atlas_map, binary_seg
     if hemi_mask is not None: del hemi_mask
     if damage_mask is not None: del damage_mask
     gc.collect()
@@ -434,11 +436,22 @@ def get_objects_and_assign_regions_optimized(segmentation, pixel_id, atlas_map, 
                                              reg_width=None, seg_height=None, seg_width=None):
     """Single-pass object detection, pixel extraction, and region assignment."""
     print(f"Detecting objects with pixel_id: {pixel_id}, tolerance: {tolerance}")
-    binary_seg = np.all(np.abs(segmentation.astype(int) - np.array(pixel_id, dtype=int)) <= tolerance, axis=2)
+    
+    # Memory-efficient binary segmentation: process channels separately with int16 instead of int32
+    # This saves ~8 bytes per pixel × num_pixels compared to full int32 conversion
+    log_memory_usage("before_binary_seg", segmentation, "Before creating binary segmentation")
+    binary_seg = (np.abs(segmentation[:,:,0].astype(np.int16) - pixel_id[0]) <= tolerance)
+    if segmentation.shape[2] > 1:
+        binary_seg &= (np.abs(segmentation[:,:,1].astype(np.int16) - pixel_id[1]) <= tolerance)
+    if segmentation.shape[2] > 2:
+        binary_seg &= (np.abs(segmentation[:,:,2].astype(np.int16) - pixel_id[2]) <= tolerance)
+    log_memory_usage("binary_seg", binary_seg, "After creating binary segmentation")
+    
     pixel_y, pixel_x = np.where(binary_seg)
     print(f"Detected {len(pixel_y)} pixels matching the target color")
     if len(pixel_y) == 0:
-        return None, None, None, None, None, None
+        del binary_seg  # Clean up before returning
+        return None, None, None, None, None, None, None
 
     scaled_y, scaled_x = scale_positions(pixel_y, pixel_x, y_scale, x_scale)
     objects_info = measure.regionprops(measure.label(binary_seg))
@@ -446,7 +459,7 @@ def get_objects_and_assign_regions_optimized(segmentation, pixel_id, atlas_map, 
     objects_info = [obj for obj in objects_info if obj.area > object_cutoff]
     print(f"Regions after area cutoff ({object_cutoff}): {len(objects_info)}")
     if len(objects_info) == 0:
-        return None, None, None, scaled_y, scaled_x, None
+        return None, None, None, scaled_y, scaled_x, None, binary_seg
 
     centroids, per_centroid_labels = [], []
 
@@ -483,4 +496,4 @@ def get_objects_and_assign_regions_optimized(segmentation, pixel_id, atlas_map, 
         centroids = scaled_centroidsX = scaled_centroidsY = None
         per_centroid_labels = np.array([])
 
-    return centroids, scaled_centroidsX, scaled_centroidsY, scaled_y, scaled_x, per_centroid_labels
+    return centroids, scaled_centroidsX, scaled_centroidsY, scaled_y, scaled_x, per_centroid_labels, binary_seg
